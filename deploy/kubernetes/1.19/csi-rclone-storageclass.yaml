@@ -3,4 +3,5 @@ kind: StorageClass
 metadata:
   name: rclone
   namespace: csi-rclone
-provisioner: kubernetes.io/no-provisioner
+provisioner: csi-rclone
+volumeBindingMode: WaitForFirstConsumer

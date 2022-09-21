@@ -43,8 +43,20 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
+        - name: csi-provisioner
+          image: quay.io/k8scsi/csi-provisioner:v1.6.1
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--enable-leader-election"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.socket
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
         - name: rclone
-          image: wunderio/csi-rclone:v1.2.8
+          image: wunderio/csi-rclone:v1.2.9
           args :
             - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
