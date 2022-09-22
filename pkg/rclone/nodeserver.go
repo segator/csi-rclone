@@ -35,6 +35,10 @@ type mountPoint struct {
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 	klog.Infof("NodePublishVolume: called with args %+v", *req)
 
+	if err := validatePublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
+
 	targetPath := req.GetTargetPath()
 
 	notMnt, err := mount.New("").IsLikelyNotMountPoint(targetPath)
@@ -101,6 +105,33 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
+func validatePublishVolumeRequest(req *csi.NodePublishVolumeRequest) error {
+	if req.GetVolumeId() == "" {
+		return status.Error(codes.FailedPrecondition, "empty volume id")
+	}
+
+	if req.GetTargetPath() == "" {
+		return status.Error(codes.FailedPrecondition, "empty target path")
+	}
+
+	if req.GetVolumeCapability() == nil {
+		return status.Error(codes.FailedPrecondition, "no volume capability set")
+	}
+	return nil
+}
+
+func validateUnPublishVolumeRequest(req *csi.NodeUnpublishVolumeRequest) error {
+	if req.GetVolumeId() == "" {
+		return status.Error(codes.FailedPrecondition, "empty volume id")
+	}
+
+	if req.GetTargetPath() == "" {
+		return status.Error(codes.FailedPrecondition, "empty target path")
+	}
+
+	return nil
+}
+
 func extractFlags(volumeContext map[string]string, secret *v1.Secret) (string, string, map[string]string, error) {
 
 	// Empty argument list
@@ -142,9 +173,10 @@ func extractFlags(volumeContext map[string]string, secret *v1.Secret) (string, s
 }
 
 func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-
 	klog.Infof("NodeUnPublishVolume: called with args %+v", *req)
-
+	if err := validateUnPublishVolumeRequest(req); err != nil {
+		return nil, err
+	}
 	targetPath := req.GetTargetPath()
 	if len(targetPath) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "NodeUnpublishVolume Target Path must be provided")
@@ -270,7 +302,7 @@ func Mount(remote string, remotePath string, targetPath string, flags map[string
 		return err
 	}
 
-	klog.Infof("executing mount command cmd=%s, remote=:%s:%s, targetpath=%s", mountCmd, remote, remotePath, targetPath)
+	klog.Infof("executing mount command cmd=%s, args=%s remote=:%s:%s, targetpath=%s", mountCmd, mountArgs, remote, remotePath, targetPath)
 
 	out, err := exec.Command(mountCmd, mountArgs...).CombinedOutput()
 	if err != nil {

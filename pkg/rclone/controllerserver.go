@@ -24,15 +24,17 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if len(name) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "CreateVolume name must be provided")
 	}
-
+	
 	// if err := cs.validateVolumeCapabilities(req.GetVolumeCapabilities()); err != nil {
 	// 	return nil, status.Error(codes.InvalidArgument, err.Error())
 	// }
 
 	reqCapacity := req.GetCapacityRange().GetRequiredBytes()
 
+	req.GetSecrets()
 	// Load default connection settings from secret
-	secret, e := getSecret("rclone-secret")
+	secretName := "rclone-secret"
+	secret, e := getSecret(secretName)
 	if e != nil {
 		klog.Warningf("getting secret error: %s", e)
 		return nil, e
@@ -59,6 +61,9 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	return &csi.CreateVolumeResponse{Volume: &csi.Volume{
 		CapacityBytes: reqCapacity,
 		VolumeId:      remote + ":" + path,
+		VolumeContext: map[string]string{
+			"secret": secretName,
+		},
 	}}, nil
 }
 
