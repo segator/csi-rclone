@@ -6,3 +6,6 @@ metadata:
 spec:
   attachRequired: true
   podInfoOnMount: false  # are we sure about this?
+  volumeLifecycleModes:
+    - Persistent
+    - Ephemeral
